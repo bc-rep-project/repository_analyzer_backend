@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 
 # Language-specific analyzers (example implementations)
-from analyzers.python_analyzer import analyze_python
+# from analyzers.python_analyzer import analyze_python
 from analyzers.java_analyzer import analyze_java
 from analyzers.ts_analyzer import analyze_typescript
 from analyzers.cpp_analyzer import analyze_cpp
@@ -52,7 +52,7 @@ def analyze_repo():
             analyses[analysis_id]['status'] = 'processing'
             
             # Analyze different languages
-            analyses[analysis_id]['results']['python'] = analyze_python(analysis_dir)
+            # analyses[analysis_id]['results']['python'] = analyze_python(analysis_dir)
             analyses[analysis_id]['results']['java'] = analyze_java(analysis_dir)
             analyses[analysis_id]['results']['typescript'] = analyze_typescript(analysis_dir)
             analyses[analysis_id]['results']['cpp'] = analyze_cpp(analysis_dir)
