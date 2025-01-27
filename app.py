@@ -11,7 +11,14 @@ from pathlib import Path
 from analyzers.java_analyzer import analyze_java
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "https://repository-analyzer-frontend.vercel.app",
+            "http://localhost:3000"
+        ]
+    }
+})
 
 ANALYSIS_BASE = Path('/tmp/code_analysis')
 ANALYSIS_BASE.mkdir(exist_ok=True)
