@@ -1,42 +1,44 @@
 import subprocess
 import json
 from pathlib import Path
-from pytsc import parse_source
 
 def analyze_typescript(analysis_dir):
     ts_files = list(analysis_dir.glob('**/*.ts'))
     
-    # Generate call graph using TypeScript compiler
+    # Create a temporary tsconfig.json for analysis
+    tsconfig = {
+        "compilerOptions": {
+            "target": "es5",
+            "module": "commonjs",
+            "outDir": "/tmp/out",
+            "sourceMap": true
+        },
+        "include": ["**/*.ts"]
+    }
+    
+    with open(analysis_dir / 'tsconfig.json', 'w') as f:
+        json.dump(tsconfig, f)
+    
+    # Run TypeScript compiler for analysis
     result = subprocess.run(
-        ['tsc', '--outDir', '/tmp', '--listFiles', '--traceResolution', '--generateTrace', '/tmp/trace'],
+        ['tsc', '--project', str(analysis_dir), '--listFiles'],
         cwd=str(analysis_dir),
         capture_output=True,
         text=True
     )
     
-    # Parse output for analysis data
     return {
-        'call_graph': parse_tsc_output(result.stdout),
-        'metrics': calculate_metrics(ts_files)
+        'call_graph': {
+            'nodes': [{'id': str(f)} for f in ts_files],
+            'links': []  # Implement link generation based on imports
+        },
+        'metrics': {
+            'file_count': len(ts_files),
+            'total_lines': sum(1 for f in ts_files for _ in open(f)),
+            'complexity': calculate_complexity(ts_files)
+        }
     }
 
-def parse_tsc_output(output):
-    # Implement parsing logic for tsc output
-    return {
-        'nodes': [],
-        'links': []
-    }
-
-def calculate_metrics(files):
-    return {
-        'file_count': len(files),
-        'average_complexity': 0  # Placeholder
-    }
-
-def generate_call_graph(files):
-    # Implementation using pytsc
-    ...
-
-def calculate_metrics(files):
-    # Metric calculation logic
-    ... 
+def calculate_complexity(files):
+    # Basic complexity calculation
+    return len(files)  # Placeholder 
