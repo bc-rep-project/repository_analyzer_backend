@@ -1,0 +1,7 @@
+flask==3.0.2
+flask-cors==4.0.0
+pyan==1.2.4
+javalang==0.13.0
+python-ts==0.2.1  # For TypeScript analysis
+clang==16.0.0      # For C/C++ analysis
+psycopg2-binary==2.9.9 

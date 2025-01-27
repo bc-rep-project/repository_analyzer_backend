@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Dependencies
+.python-version
+
+# Environment
+.env
+.env.*.local
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+/tmp/
+
+# IDE
+.vscode/
+.idea/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+
+# Temporary files
+/temp/
+
+# Local development
+instance/
+
+# Testing
+.pytest_cache/
+
+# Compiled files
+*.pyc
+*.pyo
+*.pyd 
