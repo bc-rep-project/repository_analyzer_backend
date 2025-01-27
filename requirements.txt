@@ -1,6 +1,6 @@
 flask==3.0.2
 flask-cors==4.0.0
-git+https://github.com/Technologicat/pyan.git@master#egg=pyan
+git+https://github.com/Technologicat/pyan.git@master#egg=pyan3
 javalang==0.13.0
 python-ts==0.2.1  # For TypeScript analysis
 clang==16.0.0      # For C/C++ analysis

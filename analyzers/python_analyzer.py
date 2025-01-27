@@ -1,5 +1,5 @@
 import ast
-from pyan import Visitor
+from pyan3 import Visitor
 
 def analyze_python(analysis_dir):
     # Example implementation using pyan
