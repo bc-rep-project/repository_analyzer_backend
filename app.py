@@ -12,14 +12,8 @@ from analyzers.java_analyzer import analyze_java
 
 app = Flask(__name__)
 
-# Configure CORS properly
-CORS(app, resources={
-    r"/api/v1/*": {  # Match the API version path
-        "origins": ["*"],  # In production, replace with specific origins
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
-    }
-})
+# Configure CORS for all routes
+CORS(app)
 
 # Ensure base directory exists
 ANALYSIS_BASE = Path('/tmp/code_analysis')
@@ -52,7 +46,6 @@ def analyze_repo():
         analyses[analysis_id] = {
             'status': 'cloning',
             'error': None,
-            'languages': {},
             'results': {}
         }
 
@@ -64,12 +57,12 @@ def analyze_repo():
                     ['git', 'clone', '--depth', '1', repo_url, str(analysis_dir)],
                     check=True,
                     capture_output=True,
-                    timeout=300  # 5 minute timeout
+                    timeout=60  # 1 minute timeout
                 )
                 
                 analyses[analysis_id]['status'] = 'processing'
                 
-                # Analyze different languages
+                # Analyze Java code
                 analyses[analysis_id]['results']['java'] = analyze_java(analysis_dir)
                 analyses[analysis_id]['status'] = 'completed'
                 
@@ -100,60 +93,44 @@ def analyze_repo():
 
 @app.route('/api/v1/analysis/<analysis_id>/status', methods=['GET'])
 def get_analysis_status(analysis_id):
-    try:
-        analysis = analyses.get(analysis_id)
-        if not analysis:
-            return jsonify({
-                'error': 'Analysis not found',
-                'status': 'error'
-            }), 404
-        
+    analysis = analyses.get(analysis_id)
+    if not analysis:
         return jsonify({
-            'status': analysis['status'],
-            'error': analysis.get('error')
-        })
-    except Exception as e:
-        return jsonify({
-            'error': str(e),
+            'error': 'Analysis not found',
             'status': 'error'
-        }), 500
+        }), 404
+    
+    return jsonify({
+        'status': analysis['status'],
+        'error': analysis.get('error', None)
+    })
 
 @app.route('/api/v1/analysis/<analysis_id>/<language>', methods=['GET'])
 def get_analysis_results(analysis_id, language):
-    try:
-        analysis = analyses.get(analysis_id)
-        if not analysis:
-            return jsonify({
-                'error': 'Analysis not found',
-                'status': 'error'
-            }), 404
-        
-        if analysis['status'] != 'completed':
-            return jsonify({
-                'error': 'Analysis not complete',
-                'status': 'pending'
-            }), 425
-        
-        if language not in analysis['results']:
-            return jsonify({
-                'error': f'Language {language} not analyzed',
-                'status': 'error'
-            }), 404
-        
+    analysis = analyses.get(analysis_id)
+    if not analysis:
         return jsonify({
-            'status': 'success',
-            'data': {
-                'callGraph': analysis['results'][language]['call_graph'],
-                'metrics': analysis['results'][language]['metrics']
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            'error': str(e),
+            'error': 'Analysis not found',
             'status': 'error'
-        }), 500
+        }), 404
+    
+    if analysis['status'] != 'completed':
+        return jsonify({
+            'error': 'Analysis not complete',
+            'status': analysis['status']
+        }), 425
+    
+    if language not in analysis['results']:
+        return jsonify({
+            'error': f'Language {language} not analyzed',
+            'status': 'error'
+        }), 404
+    
+    return jsonify({
+        'status': 'success',
+        'data': analysis['results'][language]
+    })
 
 if __name__ == '__main__':
-    # Use PORT environment variable if available (for Heroku/render.com compatibility)
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False) 
+    app.run(host='0.0.0.0', port=port) 
