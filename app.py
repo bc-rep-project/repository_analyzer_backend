@@ -4,80 +4,97 @@ import uuid
 import subprocess
 import os
 import shutil
-import time
 from pathlib import Path
 
 # Language-specific analyzers
 from analyzers.java_analyzer import analyze_java
 
 app = Flask(__name__)
-CORS(app, resources={
-    r"/api/*": {
-        "origins": [
-            "https://repository-analyzer-frontend.vercel.app",
-            "http://localhost:3000"
-        ]
-    }
-})
+# Update CORS configuration to be more permissive during development
+CORS(app)
 
 ANALYSIS_BASE = Path('/tmp/code_analysis')
 ANALYSIS_BASE.mkdir(exist_ok=True)
 
-# In-memory storage for demonstration (use database in production)
+# In-memory storage for demonstration
 analyses = {}
 
+# Update route to match API version
 @app.route('/api/v1/analyze', methods=['POST'])
 def analyze_repo():
-    data = request.get_json()
-    repo_url = data.get('url')
-    
-    if not repo_url or 'github.com' not in repo_url:
-        return jsonify({'error': 'Invalid GitHub repository URL'}), 400
-
-    analysis_id = str(uuid.uuid4())
-    analysis_dir = ANALYSIS_BASE / analysis_id
-    analysis_dir.mkdir()
-
-    analyses[analysis_id] = {
-        'status': 'cloning',
-        'languages': {},
-        'results': {}
-    }
-
-    # Clone repo in background
-    def clone_and_analyze():
-        try:
-            # Clone repository
-            subprocess.run(
-                ['git', 'clone', '--depth', '1', repo_url, str(analysis_dir)],
-                check=True
-            )
+    try:
+        data = request.get_json()
+        if not data or 'url' not in data:
+            return jsonify({
+                'error': 'Missing repository URL',
+                'status': 'error'
+            }), 400
             
-            analyses[analysis_id]['status'] = 'processing'
-            
-            # Analyze different languages
-            analyses[analysis_id]['results']['java'] = analyze_java(analysis_dir)
-            
-            analyses[analysis_id]['status'] = 'completed'
-            
-        except Exception as e:
-            analyses[analysis_id]['status'] = 'failed'
-            analyses[analysis_id]['error'] = str(e)
-        finally:
-            # Clean up repository
-            shutil.rmtree(analysis_dir, ignore_errors=True)
+        repo_url = data['url']
+        if not repo_url or 'github.com' not in repo_url:
+            return jsonify({
+                'error': 'Invalid GitHub repository URL',
+                'status': 'error'
+            }), 400
 
-    # Start analysis in background thread
-    from threading import Thread
-    Thread(target=clone_and_analyze).start()
+        analysis_id = str(uuid.uuid4())
+        analysis_dir = ANALYSIS_BASE / analysis_id
+        analysis_dir.mkdir(exist_ok=True)
 
-    return jsonify({'id': analysis_id}), 202
+        analyses[analysis_id] = {
+            'status': 'cloning',
+            'error': None,
+            'languages': {},
+            'results': {}
+        }
+
+        # Clone repo in background
+        def clone_and_analyze():
+            try:
+                # Clone repository
+                subprocess.run(
+                    ['git', 'clone', '--depth', '1', repo_url, str(analysis_dir)],
+                    check=True,
+                    capture_output=True
+                )
+                
+                analyses[analysis_id]['status'] = 'processing'
+                
+                # Analyze different languages
+                analyses[analysis_id]['results']['java'] = analyze_java(analysis_dir)
+                
+                analyses[analysis_id]['status'] = 'completed'
+                
+            except Exception as e:
+                analyses[analysis_id]['status'] = 'failed'
+                analyses[analysis_id]['error'] = str(e)
+            finally:
+                # Clean up repository
+                shutil.rmtree(analysis_dir, ignore_errors=True)
+
+        # Start analysis in background thread
+        from threading import Thread
+        Thread(target=clone_and_analyze, daemon=True).start()
+
+        return jsonify({
+            'id': analysis_id,
+            'status': 'initiated'
+        }), 202
+
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'status': 'error'
+        }), 500
 
 @app.route('/api/v1/analysis/<analysis_id>/status')
 def get_analysis_status(analysis_id):
     analysis = analyses.get(analysis_id)
     if not analysis:
-        return jsonify({'error': 'Analysis not found'}), 404
+        return jsonify({
+            'error': 'Analysis not found',
+            'status': 'error'
+        }), 404
     
     return jsonify({
         'status': analysis['status'],
@@ -88,18 +105,31 @@ def get_analysis_status(analysis_id):
 def get_analysis_results(analysis_id, language):
     analysis = analyses.get(analysis_id)
     if not analysis:
-        return jsonify({'error': 'Analysis not found'}), 404
+        return jsonify({
+            'error': 'Analysis not found',
+            'status': 'error'
+        }), 404
     
     if analysis['status'] != 'completed':
-        return jsonify({'error': 'Analysis not complete'}), 425
+        return jsonify({
+            'error': 'Analysis not complete',
+            'status': 'pending'
+        }), 425
     
     if language not in analysis['results']:
-        return jsonify({'error': 'Language not analyzed'}), 404
+        return jsonify({
+            'error': f'Language {language} not analyzed',
+            'status': 'error'
+        }), 404
     
     return jsonify({
-        'callGraph': analysis['results'][language]['call_graph'],
-        'metrics': analysis['results'][language]['metrics']
+        'status': 'success',
+        'data': {
+            'callGraph': analysis['results'][language]['call_graph'],
+            'metrics': analysis['results'][language]['metrics']
+        }
     })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True) 
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port) 
