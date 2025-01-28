@@ -11,6 +11,13 @@ import logging
 # Language-specific analyzers
 from analyzers.java_analyzer import analyze_java
 
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
 
 # Configure CORS for all routes
@@ -23,8 +30,13 @@ ANALYSIS_BASE.mkdir(exist_ok=True)
 # In-memory storage for demonstration
 analyses = {}
 
-# Add debug logging
-logging.basicConfig(level=logging.DEBUG)
+@app.errorhandler(Exception)
+def handle_error(error):
+    logger.exception("An error occurred")
+    return jsonify({
+        'error': str(error),
+        'status': 'error'
+    }), 500
 
 @app.route('/api/v1/analyze', methods=['POST'])
 def analyze_repo():
