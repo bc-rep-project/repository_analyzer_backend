@@ -7,12 +7,14 @@ import shutil
 import time
 from pathlib import Path
 import logging
+import sys
 
 # Language-specific analyzers
 from analyzers.java_analyzer import analyze_java
 
-# Configure logging
+# Configure logging to stdout for Render
 logging.basicConfig(
+    stream=sys.stdout,
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
@@ -23,33 +25,50 @@ app = Flask(__name__)
 # Configure CORS for all routes
 CORS(app)
 
-# Ensure base directory exists
-ANALYSIS_BASE = Path('/tmp/code_analysis')
-ANALYSIS_BASE.mkdir(exist_ok=True)
+# Use a directory that Render allows
+ANALYSIS_BASE = Path(os.environ.get('ANALYSIS_DIR', '/opt/render/project/src/analysis_temp'))
+ANALYSIS_BASE.mkdir(exist_ok=True, parents=True)
 
 # In-memory storage for demonstration
 analyses = {}
 
 @app.route('/')
 def root():
+    """Root endpoint for basic API info"""
     return jsonify({
         'message': 'Repository Analyzer API',
         'version': '1.0',
-        'status': 'operational'
+        'status': 'operational',
+        'base_path': str(ANALYSIS_BASE),
+        'environment': os.environ.get('FLASK_ENV', 'production')
     })
 
 @app.route('/api/v1')
 def health_check():
     """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'version': '1.0',
-        'endpoints': [
-            '/api/v1/analyze',
-            '/api/v1/analysis/<id>/status',
-            '/api/v1/analysis/<id>/<language>'
-        ]
-    })
+    try:
+        # Verify temp directory is writable
+        test_file = ANALYSIS_BASE / 'test.txt'
+        test_file.write_text('test')
+        test_file.unlink()
+        
+        return jsonify({
+            'status': 'healthy',
+            'version': '1.0',
+            'storage': str(ANALYSIS_BASE),
+            'writable': True,
+            'endpoints': [
+                '/api/v1/analyze',
+                '/api/v1/analysis/<id>/status',
+                '/api/v1/analysis/<id>/<language>'
+            ]
+        })
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e)
+        }), 500
 
 @app.errorhandler(Exception)
 def handle_error(error):

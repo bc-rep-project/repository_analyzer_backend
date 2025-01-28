@@ -1,1 +1,1 @@
-web: gunicorn --workers=2 --timeout=120 --log-level=debug --bind=0.0.0.0:$PORT app:app 
+web: bash start.sh 
