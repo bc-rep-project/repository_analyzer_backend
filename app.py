@@ -6,6 +6,7 @@ import os
 import shutil
 import time
 from pathlib import Path
+import logging
 
 # Language-specific analyzers
 from analyzers.java_analyzer import analyze_java
@@ -22,9 +23,13 @@ ANALYSIS_BASE.mkdir(exist_ok=True)
 # In-memory storage for demonstration
 analyses = {}
 
+# Add debug logging
+logging.basicConfig(level=logging.DEBUG)
+
 @app.route('/api/v1/analyze', methods=['POST'])
 def analyze_repo():
     try:
+        app.logger.debug("Received analyze request")
         data = request.get_json()
         if not data or 'url' not in data:
             return jsonify({
@@ -129,6 +134,13 @@ def get_analysis_results(analysis_id, language):
     return jsonify({
         'status': 'success',
         'data': analysis['results'][language]
+    })
+
+@app.route('/api/v1', methods=['GET'])
+def health_check():
+    return jsonify({
+        'status': 'healthy',
+        'version': '1.0'
     })
 
 if __name__ == '__main__':
