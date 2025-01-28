@@ -7,14 +7,13 @@ import shutil
 import time
 from pathlib import Path
 import logging
-import sys
+from dotenv import load_dotenv
 
 # Language-specific analyzers
 from analyzers.java_analyzer import analyze_java
 
-# Configure logging to stdout for Render
+# Configure logging
 logging.basicConfig(
-    stream=sys.stdout,
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
@@ -25,50 +24,46 @@ app = Flask(__name__)
 # Configure CORS for all routes
 CORS(app)
 
-# Use a directory that Render allows
-ANALYSIS_BASE = Path(os.environ.get('ANALYSIS_DIR', '/opt/render/project/src/analysis_temp'))
+# Configure base directory based on environment
+ANALYSIS_BASE = Path(__file__).parent / os.getenv('ANALYSIS_DIR', 'analysis_temp')
 ANALYSIS_BASE.mkdir(exist_ok=True, parents=True)
+
+# Configure CORS with environment
+ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', '*').split(',')
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ALLOWED_ORIGINS,
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
+
+# Configure timeouts from environment
+GIT_TIMEOUT = int(os.getenv('GIT_TIMEOUT', 60))
 
 # In-memory storage for demonstration
 analyses = {}
 
 @app.route('/')
 def root():
-    """Root endpoint for basic API info"""
     return jsonify({
         'message': 'Repository Analyzer API',
         'version': '1.0',
-        'status': 'operational',
-        'base_path': str(ANALYSIS_BASE),
-        'environment': os.environ.get('FLASK_ENV', 'production')
+        'status': 'operational'
     })
 
 @app.route('/api/v1')
 def health_check():
     """Health check endpoint"""
-    try:
-        # Verify temp directory is writable
-        test_file = ANALYSIS_BASE / 'test.txt'
-        test_file.write_text('test')
-        test_file.unlink()
-        
-        return jsonify({
-            'status': 'healthy',
-            'version': '1.0',
-            'storage': str(ANALYSIS_BASE),
-            'writable': True,
-            'endpoints': [
-                '/api/v1/analyze',
-                '/api/v1/analysis/<id>/status',
-                '/api/v1/analysis/<id>/<language>'
-            ]
-        })
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        return jsonify({
-            'status': 'unhealthy',
-            'error': str(e)
-        }), 500
+    return jsonify({
+        'status': 'healthy',
+        'version': '1.0',
+        'endpoints': [
+            '/api/v1/analyze',
+            '/api/v1/analysis/<id>/status',
+            '/api/v1/analysis/<id>/<language>'
+        ]
+    })
 
 @app.errorhandler(Exception)
 def handle_error(error):
@@ -115,7 +110,7 @@ def analyze_repo():
                     ['git', 'clone', '--depth', '1', repo_url, str(analysis_dir)],
                     check=True,
                     capture_output=True,
-                    timeout=60
+                    timeout=GIT_TIMEOUT
                 )
                 
                 analyses[analysis_id]['status'] = 'processing'
