@@ -20,4 +20,8 @@ router.put('/users/:id', updateUser);
 router.get('/notifications', getNotifications);
 router.post('/notifications', createNotification);
 
+router.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK' });
+  });
+
 module.exports = router;
