@@ -1,50 +1,41 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-*.so
-.Python
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
+node_modules/
+.env
+.DS_Store
 # Dependencies
-.python-version
+/node_modules/
+/.pnp
+.pnp.js
+
+# Build
+/.next/
+/out/
+/build
 
 # Environment
-.env
-.env.*.local
+.env*.local
 
-# Logs and databases
-*.log
-*.sqlite
-*.db
-/tmp/
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # IDE
 .vscode/
 .idea/
 
-# Coverage
-.coverage
-htmlcov/
+# OS metadata
+.DS_Store
+Thumbs.db
 
-# Build artifacts
-dist/
-build/
+# Test
+/coverage
+.nyc_output
 
-# Temporary files
-/temp/
+# Lint
+.eslintcache
+
+# TypeScript
+*.tsbuildinfo
 
 # Local development
-instance/
-
-# Testing
-.pytest_cache/
-
-# Compiled files
-*.pyc
-*.pyo
-*.pyd 
+public/static/ 
