@@ -1,3 +1,5 @@
+const { visualizeRepository } = require('../controllers/visualizationController');
+
 const express = require('express');
 const router = express.Router();
 const {
@@ -10,6 +12,9 @@ const {
   getNotifications,
   createNotification
 } = require('../controllers/notificationController');
+
+// Add new route
+router.get('/visualize/:userId', visualizeRepository);
 
 // User routes
 router.get('/users', getUsers);
