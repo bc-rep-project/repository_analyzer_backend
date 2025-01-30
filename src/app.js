@@ -23,6 +23,19 @@ app.use(limiter);
 // Database connection
 connectDB();
 
+// Add specific origin and headers
+const corsOptions = {
+  origin: [
+    'https://repository-analyzer-frontend.vercel.app',
+    'http://localhost:3000'
+  ],
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+
 // Routes
 app.use('/api', apiRoutes);
 
